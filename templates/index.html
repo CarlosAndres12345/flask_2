@@ -1,0 +1,83 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Gestión de Productos</h1>
+    <form id="product-form">
+        <input type="text" id="name" placeholder="Nombre del producto" required>
+        <input type="number" id="price" placeholder="Precio" required>
+        <input type="text" id="description" placeholder="Descripción">
+        <button type="submit" id="submit-btn">Agregar Producto</button>
+    </form>
+    <ul id="product-list"></ul>
+
+    <script>
+        let editingId = null;
+
+        document.getElementById('product-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const price = document.getElementById('price').value;
+            const description = document.getElementById('description').value;
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (editingId) {
+                await fetch(`/products/${editingId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, price, description})
+                });
+                editingId = null;
+                submitBtn.textContent = "Agregar Producto";
+            } else {
+                await fetch('/products', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, price, description})
+                });
+            }
+            
+            event.target.reset();
+            loadProducts();
+        });
+
+        async function loadProducts() {
+            const response = await fetch('/products');
+            const products = await response.json();
+            const list = document.getElementById('product-list');
+            list.innerHTML = '';
+            products.forEach(product => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${product.name}</strong> - $${product.price}
+                    <p>${product.description}</p>
+                    <button onclick="editProduct(${product.id}, '${product.name}', ${product.price}, '${product.description}')">Editar</button>
+                    <button onclick="deleteProduct(${product.id})">Eliminar</button>`;
+                list.appendChild(li);
+            });
+        }
+
+        async function deleteProduct(id) {
+            await fetch(`/products/${id}`, { method: 'DELETE' });
+            loadProducts();
+        }
+
+        function editProduct(id, name, price, description) {
+            document.getElementById('name').value = name;
+            document.getElementById('price').value = price;
+            document.getElementById('description').value = description;
+            document.getElementById('submit-btn').textContent = "Guardar Cambios";
+            editingId = id;
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>
+
+
